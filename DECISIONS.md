@@ -18,6 +18,7 @@ El paquete `api` y la firma de `Inventory.create` no cambiaron. No se agregaron 
 
 `mvn test` con Java 21: 156 ejecuciones, todas pasan, incluidos los 3 tests originales.
 
+- GitHub Actions corre la misma suite con Java 21 en cada push a `main` y en cada Pull Request (`.github/workflows/tests.yml`).
 - Los tests de comportamiento usan solo el contrato, a través de `Inventory.create`, con un reloj que el test mueve a mano. No hay `sleep` ni dependencia de la hora real.
 - `ConcurrencyTest` lanza 300 pedidos desde 16 hilos contra 50 unidades y se repite 20 veces por caso. Para comprobar que detecta carreras, quité el lock temporalmente: fallaron 51 de las 80 ejecuciones. Con el lock pasan todas.
 
@@ -36,7 +37,7 @@ El README y el contrato dejan abiertos varios casos. Esto es lo que asumí; cada
 **Vencimiento**
 
 - La reserva está activa hasta justo antes de `expiresAt`. En el instante exacto de `expiresAt` ya está liberada.
-- Un pago que llega después del vencimiento falla con `IllegalStateException`, aunque todavía haya stock. Ver "Antes de producción".
+- Un pago que llega después del vencimiento falla con `IllegalStateException`, aunque todavía haya stock. Ver "Qué cambiaría antes de llevarlo a producción".
 - El plazo se fija al reservar. Si el producto cambia de categoría después, las reservas existentes conservan el suyo.
 
 **Confirmación**
@@ -76,7 +77,7 @@ El README y el contrato dejan abiertos varios casos. Esto es lo que asumí; cada
 - **Métricas y trazas.** Solo hay un log de error cuando un aviso no se entrega.
 - **Validación de identificadores.** `null` se rechaza; un `sku` u `orderId` vacío se acepta.
 
-## Antes de producción
+## Qué cambiaría antes de llevarlo a producción
 
 1. **Mover el estado a la base de datos.** El lock se reemplaza por una transacción por pedido que bloquea la fila del producto (o un `UPDATE` condicional sobre las unidades disponibles) y por una restricción de unicidad sobre `orderId`, que es la que da la idempotencia entre instancias. Las reservas vencidas se excluyen comparando `expires_at` con la hora de la base de datos, no con el reloj de cada instancia.
 2. **Avisos confiables.** Guardar el aviso pendiente en la misma transacción que la reserva y enviarlo desde un proceso aparte con reintentos (outbox). Eso quita el envío del camino del cliente y hace que el reintento no dependa de que llegue otro pedido.
