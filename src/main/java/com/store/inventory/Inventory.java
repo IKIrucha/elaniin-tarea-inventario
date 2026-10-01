@@ -2,6 +2,8 @@ package com.store.inventory;
 
 import com.store.inventory.api.InventoryService;
 import com.store.inventory.api.StockAlertListener;
+import com.store.inventory.reservation.CategoryPolicies;
+import com.store.inventory.reservation.ReservationService;
 import java.time.Clock;
 
 /**
@@ -10,10 +12,13 @@ import java.time.Clock;
  */
 public final class Inventory {
 
+    /** Purchasing is alerted when a product has this many available units or fewer. */
+    private static final int LOW_STOCK_THRESHOLD = 5;
+
     private Inventory() {
     }
 
     public static InventoryService create(Clock clock, StockAlertListener alertListener) {
-        throw new UnsupportedOperationException("TODO");
+        return new ReservationService(clock, CategoryPolicies::forCategory, alertListener, LOW_STOCK_THRESHOLD);
     }
 }
